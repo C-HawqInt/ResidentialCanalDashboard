@@ -1,0 +1,56 @@
+C-HAWQ Residential Canal Dashboard — License and Terms
+Copyright © 2026 C-HAWQ (Coastal Habitat and Water Quality Initiative).
+
+================================================================
+1. SOFTWARE / CODE — All Rights Reserved
+================================================================
+All source code in this repository (including index.html and any
+scripts, styles, and markup) is the property of C-HAWQ and is
+protected by copyright. All rights are reserved.
+
+You MAY:
+  - View the dashboard and use it for informational purposes.
+  - Link to it and embed the published page (e.g., via an iframe).
+
+You MAY NOT, without prior written permission from C-HAWQ:
+  - Copy, reproduce, or redistribute the source code.
+  - Modify, adapt, or create derivative works from the code.
+  - Use the code, in whole or in part, in any other product or
+    service, commercial or non-commercial.
+
+No open-source or other license is granted by implication.
+
+================================================================
+2. DATA — Creative Commons BY-NC-ND 4.0
+================================================================
+The C-HAWQ residential canal footprint data presented and made
+available for export by this dashboard (the compiled polygons and
+C-HAWQ-added attributes, including CHAWQ_ID and classifications)
+is licensed under the Creative Commons
+Attribution-NonCommercial-NoDerivatives 4.0 International License.
+
+You are free to share (copy and redistribute) the data in any
+medium, provided that you:
+  - Give appropriate credit to C-HAWQ (Coastal Habitat and Water
+    Quality Initiative);
+  - Do not use it for commercial purposes;
+  - Do not distribute modified or derivative versions of the data.
+
+Full license text: https://creativecommons.org/licenses/by-nc-nd/4.0/
+
+================================================================
+3. UNDERLYING PUBLIC DATA
+================================================================
+Portions of the footprint are derived from public datasets that
+remain under their original terms, including:
+  - U.S. Geological Survey — National Hydrography Dataset (NHD)
+  - Florida Department of Environmental Protection — basin and
+    planning-unit data
+  - Florida municipal boundary (city limits) data, 2021
+
+C-HAWQ's compilation, delineation, classification, and added
+attributes are the copyrightable contribution licensed above and
+do not restrict independent use of the original public sources.
+
+================================================================
+Permissions and questions: nathan@chawq.org
