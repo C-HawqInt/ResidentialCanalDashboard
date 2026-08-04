@@ -242,82 +242,266 @@ button.primary{padding:8px 12px;border:1px solid var(--blue);background:var(--bl
 </div>
 
 <script>
-// Main GeoJSON dataset
-window.CANAL_GEOJSON={"type":"FeatureCollection","features":[{"type":"Feature","properties":{"CHAWQ_ID":1,"County":"Monroe","WATERBODY_":"STOCK ISLAND","GROUP_NAME":"Florida Keys","GROUP_NUMB":"Group 5","WBID":"6014B","HUC":"03090203","DISTRICT":"SD","PLANNING_U":"Lower Keys","area_acres":5.9595,"peri_miles":0.6675,"Area_km2":0.0241,"peri_km":1.0743,"City":"Unincorporated"},"geometry":{"type":"Polygon","coordinates":[[[-81.740995,24.564705],[-81.740973,24.564335],[-81.740949,24.56425],[-81.744729,24.564228],[-81.744873,24.564147],[-81.745051,24.564116],[-81.74548,24.564119],[-81.745603,24.564152],[-81.745716,24.564214],[-81.745365,24.564214],[-81.745366,24.564719],[-81.745314,24.564698],[-81.741509,24.564716],[-81.740995,24.564705]]]}}]};
-
-// Toggle Export Menu Visibility
-document.getElementById('f-export').addEventListener('click', function() {
-  const menu = document.getElementById('exportmenu');
-  menu.hidden = !menu.hidden;
-});
-
-// Initialize EmailJS
+// 1. Initialize EmailJS
 (function() {
   emailjs.init("V-lzxboZ_ZUVStmb-");
 })();
 
-// EmailJS Trigger
-document.getElementById('em-send').addEventListener('click', async function(e) {
-  e.preventDefault();
+// Dashboard State & Layer Containers
+let map, geojsonLayer, countyChart, districtChart, sizeChart;
+let allFeatures = [];
+let filteredFeatures = [];
+let selectedIds = new Set();
 
-  const nameInput = document.getElementById('req-name');
-  const emailInput = document.getElementById('req-email');
-  const recipientInput = document.getElementById('req-recipient');
-  const purposeInput = document.getElementById('req-purpose');
-  const scopeElement = document.getElementById('req-scope');
-  const statusMsg = document.getElementById('req-status');
-  const sendBtn = document.getElementById('em-send');
-
-  if (!nameInput.value.trim() || !emailInput.value.trim() || !purposeInput.value.trim()) {
-    alert("Please enter your name, email, and request purpose.");
+// Wait for DOM to load
+document.addEventListener('DOMContentLoaded', () => {
+  if (!window.CANAL_GEOJSON || !window.CANAL_GEOJSON.features) {
+    console.error("GeoJSON data not found in window.CANAL_GEOJSON");
     return;
   }
 
-  sendBtn.disabled = true;
-  statusMsg.style.color = "var(--blue)";
-  statusMsg.innerText = "Submitting request...";
+  allFeatures = window.CANAL_GEOJSON.features;
+  filteredFeatures = [...allFeatures];
 
-  const templateParams = {
-    user_name: nameInput.value,
-    user_email: emailInput.value,
-    recipient_email: recipientInput.value,
-    user_purpose: purposeInput.value,
-    requested_scope: scopeElement ? scopeElement.innerText : "Filtered Dashboard Scope"
-  };
-
-  const SERVICE_ID = "YOUR_SERVICE_ID";
-  const ADMIN_TEMPLATE_ID = "template_u9xyq8i";
-  const CUSTOMER_TEMPLATE_ID = "template_03jqwie";
-
-  try {
-    // 1. Send Order Notification to Admin / Nathan
-    await emailjs.send(SERVICE_ID, ADMIN_TEMPLATE_ID, templateParams);
-
-    // 2. Send Order Confirmation Receipt to the Customer
-    await emailjs.send(SERVICE_ID, CUSTOMER_TEMPLATE_ID, templateParams);
-
-    statusMsg.style.color = "green";
-    statusMsg.innerText = "Request sent successfully!";
-    
-    // Reset Form
-    nameInput.value = "";
-    emailInput.value = "";
-    purposeInput.value = "";
-
-    // Close menu after 2.5 seconds
-    setTimeout(() => {
-      document.getElementById('exportmenu').hidden = true;
-      statusMsg.innerText = "";
-    }, 2500);
-
-  } catch (error) {
-    console.error("EmailJS Error:", error);
-    statusMsg.style.color = "red";
-    statusMsg.innerText = "Failed to send. Please email nathan@chawq.org directly.";
-  } finally {
-    sendBtn.disabled = false;
-  }
+  initMap();
+  populateDropdowns();
+  updateDashboard();
+  setupEventListeners();
 });
+
+// Initialize Leaflet Map
+function initMap() {
+  map = L.map('map').setView([25.5, -80.8], 8);
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 19
+  }).addTo(map);
+
+  renderGeoJSON();
+}
+
+// Render GeoJSON Polygons onto Map
+function renderGeoJSON() {
+  if (geojsonLayer) map.removeLayer(geojsonLayer);
+
+  geojsonLayer = L.geoJSON({ type: "FeatureCollection", features: filteredFeatures }, {
+    style: feature => ({
+      fillColor: getColor(feature.properties),
+      weight: 1.5,
+      opacity: 1,
+      color: '#1f396d',
+      fillOpacity: 0.6
+    }),
+    onEachFeature: (feature, layer) => {
+      const props = feature.properties;
+      layer.bindPopup(`
+        <h4>${props.WATERBODY_ || 'Canal Poly'} (ID: ${props.CHAWQ_ID})</h4>
+        <p><b>County:</b> ${props.County || 'N/A'}<br>
+        <b>City:</b> ${props.City || 'N/A'}<br>
+        <b>Area:</b> ${props.area_acres ? props.area_acres.toFixed(2) : '—'} acres<br>
+        <b>Perimeter:</b> ${props.peri_miles ? props.peri_miles.toFixed(2) : '—'} miles</p>
+      `);
+    }
+  }).addTo(map);
+}
+
+// Color coding helper
+function getColor(props) {
+  const colorBy = document.getElementById('f-colorby')?.value || 'DISTRICT';
+  if (colorBy === 'County') {
+    return props.County === 'Monroe' ? '#3f886c' : '#48c5e3';
+  }
+  return '#1f396d';
+}
+
+// Populate Filter Dropdowns dynamically
+function populateDropdowns() {
+  populateSelect('f-county', 'County');
+  populateSelect('f-city', 'City');
+  populateSelect('f-district', 'DISTRICT');
+  populateSelect('f-planning', 'PLANNING_U');
+}
+
+function populateSelect(elementId, propKey) {
+  const select = document.getElementById(elementId);
+  if (!select) return;
+
+  const uniqueVals = [...new Set(allFeatures.map(f => f.properties[propKey]).filter(Boolean))].sort();
+  uniqueVals.forEach(val => {
+    const opt = document.createElement('option');
+    opt.value = val;
+    opt.textContent = val;
+    select.appendChild(opt);
+  });
+}
+
+// Recalculate KPIs and Update UI
+function updateDashboard() {
+  const count = filteredFeatures.length;
+  const totalAcres = filteredFeatures.reduce((sum, f) => sum + (f.properties.area_acres || 0), 0);
+  const totalMiles = filteredFeatures.reduce((sum, f) => sum + (f.properties.peri_miles || 0), 0);
+  const counties = new Set(filteredFeatures.map(f => f.properties.County).filter(Boolean)).size;
+  
+  // Median Calculation
+  const acresArr = filteredFeatures.map(f => f.properties.area_acres || 0).sort((a, b) => a - b);
+  let medianAcres = 0;
+  if (acresArr.length > 0) {
+    const mid = Math.floor(acresArr.length / 2);
+    medianAcres = acresArr.length % 2 !== 0 ? acresArr[mid] : (acresArr[mid - 1] + acresArr[mid]) / 2;
+  }
+
+  // Update KPI Cards
+  document.getElementById('k-count').textContent = count.toLocaleString();
+  document.getElementById('k-acres').textContent = totalAcres.toLocaleString(undefined, {maximumFractionDigits: 1});
+  document.getElementById('k-miles').textContent = totalMiles.toLocaleString(undefined, {maximumFractionDigits: 1});
+  document.getElementById('k-counties').textContent = counties;
+  document.getElementById('k-median').textContent = medianAcres.toFixed(2);
+
+  // Update Request Scope indicator
+  const scopeElem = document.getElementById('req-scope');
+  if (scopeElem) {
+    scopeElem.textContent = `Current filter results: ${count} canals (${totalAcres.toFixed(1)} acres)`;
+  }
+
+  renderList();
+  renderGeoJSON();
+}
+
+// Render Sidebar List
+function renderList() {
+  const listWrap = document.getElementById('listwrap');
+  const listSub = document.getElementById('list-sub');
+  if (!listWrap) return;
+
+  listSub.textContent = `Showing ${filteredFeatures.length} canals`;
+  listWrap.innerHTML = '';
+
+  filteredFeatures.slice(0, 100).forEach(f => {
+    const props = f.properties;
+    const row = document.createElement('div');
+    row.className = 'listrow';
+    row.innerHTML = `
+      <div class="nm">${props.WATERBODY_ || 'Canal System'} (ID: ${props.CHAWQ_ID})</div>
+      <div class="mt">${props.County} Co. · ${props.area_acres ? props.area_acres.toFixed(2) : '—'} acres</div>
+    `;
+    row.addEventListener('click', () => {
+      const bounds = L.geoJSON(f).getBounds();
+      map.fitBounds(bounds, { maxZoom: 15 });
+    });
+    listWrap.appendChild(row);
+  });
+}
+
+// Filter and Search Handler
+function applyFilters() {
+  const searchVal = document.getElementById('f-search').value.toLowerCase();
+  const countyVal = document.getElementById('f-county').value;
+  const cityVal = document.getElementById('f-city').value;
+  const districtVal = document.getElementById('f-district').value;
+  const planningVal = document.getElementById('f-planning').value;
+
+  filteredFeatures = allFeatures.filter(f => {
+    const p = f.properties;
+    const matchesSearch = !searchVal || 
+      (p.WATERBODY_ && p.WATERBODY_.toLowerCase().includes(searchVal)) || 
+      String(p.CHAWQ_ID).includes(searchVal);
+    const matchesCounty = !countyVal || p.County === countyVal;
+    const matchesCity = !cityVal || p.City === cityVal;
+    const matchesDistrict = !districtVal || p.DISTRICT === districtVal;
+    const matchesPlanning = !planningVal || p.PLANNING_U === planningVal;
+
+    return matchesSearch && matchesCounty && matchesCity && matchesDistrict && matchesPlanning;
+  });
+
+  updateDashboard();
+}
+
+// Event Listeners
+function setupEventListeners() {
+  ['f-search', 'f-county', 'f-city', 'f-district', 'f-planning', 'f-colorby'].forEach(id => {
+    const elem = document.getElementById(id);
+    if (elem) elem.addEventListener('change', applyFilters);
+  });
+
+  document.getElementById('f-search')?.addEventListener('input', applyFilters);
+
+  document.getElementById('f-reset')?.addEventListener('click', () => {
+    document.getElementById('f-search').value = '';
+    document.getElementById('f-county').value = '';
+    document.getElementById('f-city').value = '';
+    document.getElementById('f-district').value = '';
+    document.getElementById('f-planning').value = '';
+    filteredFeatures = [...allFeatures];
+    updateDashboard();
+    map.setView([25.5, -80.8], 8);
+  });
+
+  // Toggle Export Menu
+  document.getElementById('f-export')?.addEventListener('click', () => {
+    const menu = document.getElementById('exportmenu');
+    if (menu) menu.hidden = !menu.hidden;
+  });
+
+  // EmailJS Submit Event
+  document.getElementById('em-send')?.addEventListener('click', async (e) => {
+    e.preventDefault();
+
+    const nameInput = document.getElementById('req-name');
+    const emailInput = document.getElementById('req-email');
+    const recipientInput = document.getElementById('req-recipient');
+    const purposeInput = document.getElementById('req-purpose');
+    const scopeElement = document.getElementById('req-scope');
+    const statusMsg = document.getElementById('req-status');
+    const sendBtn = document.getElementById('em-send');
+
+    if (!nameInput.value.trim() || !emailInput.value.trim() || !purposeInput.value.trim()) {
+      alert("Please enter your name, email, and request purpose.");
+      return;
+    }
+
+    sendBtn.disabled = true;
+    statusMsg.style.color = "var(--blue)";
+    statusMsg.innerText = "Submitting request...";
+
+    const templateParams = {
+      user_name: nameInput.value,
+      user_email: emailInput.value,
+      recipient_email: recipientInput.value,
+      user_purpose: purposeInput.value,
+      requested_scope: scopeElement ? scopeElement.innerText : "Filtered Dashboard Scope"
+    };
+
+    const SERVICE_ID = "YOUR_SERVICE_ID";
+    const ADMIN_TEMPLATE_ID = "template_u9xyq8i";
+    const CUSTOMER_TEMPLATE_ID = "template_03jqwie";
+
+    try {
+      await emailjs.send(SERVICE_ID, ADMIN_TEMPLATE_ID, templateParams);
+      await emailjs.send(SERVICE_ID, CUSTOMER_TEMPLATE_ID, templateParams);
+
+      statusMsg.style.color = "green";
+      statusMsg.innerText = "Request sent successfully!";
+      
+      nameInput.value = "";
+      emailInput.value = "";
+      purposeInput.value = "";
+
+      setTimeout(() => {
+        document.getElementById('exportmenu').hidden = true;
+        statusMsg.innerText = "";
+      }, 2500);
+
+    } catch (error) {
+      console.error("EmailJS Error:", error);
+      statusMsg.style.color = "red";
+      statusMsg.innerText = "Failed to send. Please email nathan@chawq.org directly.";
+    } finally {
+      sendBtn.disabled = false;
+    }
+  });
+}
 </script>
 
 </body>
