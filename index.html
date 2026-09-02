@@ -516,7 +516,7 @@ function fillSelect(id,vals,labelFn){
 }
 function initMap(){
   MAP=L.map("map",{preferCanvas:true,zoomControl:true}).setView([27.8,-83.4],7);
-  const light=L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{
+  const light=L.tileLayer("https://basemaps.cartocdn.com/rastertiles/voyager/%7Bz%7D/%7Bx%7D/%7By%7D.png?key=cb1_2t30_1_368e7b086e103fd30ed36bef",{
     attribution:'&copy; OpenStreetMap contributors &copy; CARTO',subdomains:'abcd',maxZoom:19}).addTo(MAP);
   const sat=L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{
     attribution:'Imagery &copy; Esri, Maxar, Earthstar Geographics',maxZoom:19});
