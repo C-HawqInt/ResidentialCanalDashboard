@@ -167,11 +167,7 @@ button.primary{padding:8px 12px;border:1px solid var(--blue);background:var(--bl
         <input type="email" id="req-email" placeholder="you@example.org">
         <textarea id="req-purpose" rows="3" placeholder="What will you use the shapefiles for?"></textarea>
         <div class="emh">Send request to</div>
-        <select id="req-recipient">
-          <option value="nathan@chawq.org">nathan@chawq.org</option>
-          <option value="admin@chawq.org">admin@chawq.org</option>
-          <option value="nathan@chawq.org,admin@chawq.org">Both accounts</option>
-        </select>
+        <div class="emhint">Nathan@CHAWQ.org</div>
         <button class="primary" id="em-send" style="margin-top:8px">Send request</button>
         <div class="emhint" id="req-status"></div>
         <div class="emhint">We'll email the shapefiles for your selection. Filter or click canals to build your request, add your details, and send.</div>
@@ -498,7 +494,7 @@ async function sendShapefileRequest(){
   if(EMAILJS_SERVICE_ID==="YOUR_SERVICE_ID"){ fail("Requests aren't live yet \u2014 the EmailJS Service ID still needs to be set in the code."); return; }
   btn.disabled=true; status.style.color="var(--blue)"; status.textContent="Sending request\u2026";
   const _i=requestInfo();
-  const params={user_name:name,user_email:email,recipient_email:$("req-recipient").value,user_purpose:purpose,request_mode:_i.mode,canal_count:String(_i.count),total_acres:_i.acres.toLocaleString(),filters_applied:_i.filters,canal_ids:_i.ids,requested_scope:requestScopeText()};
+  const params={user_name:name,user_email:email,recipient_email:"Nathan@CHAWQ.org",user_purpose:purpose,request_mode:_i.mode,canal_count:String(_i.count),total_acres:_i.acres.toLocaleString(),filters_applied:_i.filters,canal_ids:_i.ids,requested_scope:requestScopeText()};
   try{
     await emailjs.send(EMAILJS_SERVICE_ID,EMAILJS_ADMIN_TEMPLATE,params);
     await emailjs.send(EMAILJS_SERVICE_ID,EMAILJS_CUSTOMER_TEMPLATE,params);
