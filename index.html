@@ -558,7 +558,7 @@ function initMap(){
     attribution:'&copy; OpenStreetMap contributors &copy; CARTO',subdomains:'abcd',maxZoom:19}).addTo(MAP);
   const sat=L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{
     attribution:'Imagery &copy; Esri, Maxar, Earthstar Geographics',maxZoom:19});
-  const satLabels=L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png?key=cb1_2t30_1_368e7b086e103fd30ed36bef",{subdomains:'abcd',maxZoom:19});
+  const satLabels=L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png?key=cb1_2t30_3_e3c2809e6e23a0c88978b5e4",{subdomains:'abcd',maxZoom:19});
   const satellite=L.layerGroup([sat,satLabels]);
   L.control.layers({"Map (light)":light,"Satellite":satellite},null,{position:"topright",collapsed:false}).addTo(MAP);
 }
