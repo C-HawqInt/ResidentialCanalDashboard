@@ -1,6 +1,6 @@
 # C-HAWQ Residential Canal Dashboard
 
-An interactive map of Florida's statewide residential canal footprint — 3,050 mapped canal systems. Filter by county, city/municipality, water management district, basin planning unit, and canal size; click any canal for its full attributes; recolor canals, switch to satellite imagery, and export selections as Shapefile, GeoJSON, or CSV.
+An interactive map of Florida's statewide residential canal footprint. Filter by county, city/municipality, water management district, basin planning unit, canal size, form, receiving waters, and connectivity; click any canal for its full source attributes; recolor canals, switch to satellite imagery, and request selections.
 
 Built and maintained by **C-HAWQ — the Coastal Habitat and Water Quality Initiative**.
 
@@ -12,7 +12,8 @@ Once GitHub Pages is enabled (Settings → Pages → Deploy from a branch → `m
 
 ## What's in this repo
 
-- **index.html** — the entire dashboard. The canal data is embedded in this one file, so there's nothing else to serve.
+- **index.html** — the dashboard.
+- **ResCanals_Typology_for_GitHub_10072026.zip** — required shapefile archive. Add it beside `index.html` and include it in the GitHub Pages deployment.
 
 ## Using it
 
@@ -22,7 +23,7 @@ To preview locally, serve the folder over HTTP (`python -m http.server`) and ope
 
 ## Data
 
-Each polygon is one mapped residential canal system with its area, perimeter, county, city/municipality, water management district, basin planning unit, HUC-8, and WBID. The footprint is derived from C-HAWQ's canal delineation pipeline, building on public sources (U.S. Geological Survey National Hydrography Dataset; Florida Department of Environmental Protection basin data; Florida city-limits data). City assignment is a spatial join to 2021 Florida municipal boundaries.
+Each polygon is one mapped residential canal system. The dashboard reads polygon geometry and attributes directly from the required shapefile ZIP; form (`TYP_FORM`), receiving waters (`TYP_RECWATER`), and connectivity (`TYP_CONNEC`) are available as filters and map color dimensions. All remaining source attributes appear in each feature popup.
 
 ## License
 
