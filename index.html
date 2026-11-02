@@ -162,7 +162,6 @@ button.primary{padding:8px 12px;border:1px solid var(--blue);background:var(--bl
       <div class="sr-panel" id="sr-panel" role="listbox" hidden></div>
     </div>
     <div class="fgrp"><label>County</label><select id="f-county"><option value="">All counties</option></select></div>
-    <div class="fgrp"><label>City / municipality</label><select id="f-city"><option value="">All cities</option></select></div>
     <div class="fgrp"><label>Water management district</label><select id="f-district"><option value="">All districts</option></select></div>
     <div class="fgrp"><label>Planning unit</label><select id="f-planning"><option value="">All planning units</option></select></div>
     <div class="fgrp"><label>Size class</label><select id="f-size"><option value="">All sizes</option></select></div>
@@ -289,7 +288,7 @@ function effectiveFilters(){
   return {
     search:  currentSearchText(),
     county:  $("f-county").value,
-    city:    $("f-city").value,
+    city:    CITY?CITY.name:"",
     district:$("f-district").value,
     planning:$("f-planning").value,
     size:    $("f-size").value,
@@ -520,7 +519,7 @@ const STOPWORDS=new Set(["county","co","city","of","the","and","fl","fla","flori
 const ALIASES={st:["saint","street"],saint:["st"],ft:["fort"],fort:["ft"],pt:["point"],point:["pt"],mt:["mount"],mount:["mt"],
   isl:["island"],island:["isl"],bch:["beach"],beach:["bch"],hbr:["harbor","harbour"],harbor:["harbour","hbr"],harbour:["harbor","hbr"],
   ctr:["center","centre"],center:["centre","ctr"],centre:["center"],cswy:["causeway"],causeway:["cswy"],lk:["lake"],lake:["lk"]};
-let SEARCH_CTX=null, VOCAB=[], GEO={cities:[],counties:[],plans:[]}, PLACE=null, PLACE_MARKER=null, searchT=null;
+let SEARCH_CTX=null, VOCAB=[], GEO={cities:[],counties:[],plans:[]}, PLACE=null, PLACE_MARKER=null, searchT=null, CITY=null;   // CITY: exact-city filter set by picking a city suggestion
 const SR={q:"",local:{cities:[],counties:[],plans:[],canals:[]},places:[],pstate:"idle",flat:[],act:-1,open:false};
 
 function norm(s){
@@ -623,6 +622,7 @@ function indexData(){
 }
 function currentSearchText(){
   const v=$("f-search").value.trim();
+  if(CITY){ if(v===CITY.label) return ""; CITY=null; }
   if(PLACE){ if(v===PLACE.label) return ""; clearPlace(false); }
   return v;
 }
@@ -779,9 +779,9 @@ function updateSuggestions(){
 }
 
 // ---- choosing a suggestion ----
-const SELECT_FILTERS=["f-county","f-city","f-district","f-planning","f-size","f-form","f-recwater","f-connec"];
+const SELECT_FILTERS=["f-county","f-district","f-planning","f-size","f-form","f-recwater","f-connec"];
 function clearPlace(uncheckView){
-  PLACE=null;
+  PLACE=null; CITY=null;
   if(PLACE_MARKER){ MAP.removeLayer(PLACE_MARKER); PLACE_MARKER=null; }
   if(uncheckView) $("f-view").checked=false;
 }
@@ -791,10 +791,11 @@ function pickItem(it){
   closePanel();
   const inp=$("f-search");
   if(it.kind==="city"||it.kind==="county"||it.kind==="plan"){
-    const id=it.kind==="city"?"f-city":it.kind==="county"?"f-county":"f-planning";
     const fld=it.kind==="city"?"City":it.kind==="county"?"County":"PLANNING_U";
-    clearPlace(true); inp.value=""; ["f-county","f-city","f-planning"].forEach(x=>$(x).value="");
-    $(id).value=it.label; refresh(); flyToFilter(p=>p[fld]===it.label);
+    clearPlace(true); ["f-county","f-planning"].forEach(x=>$(x).value="");
+    if(it.kind==="city"){ CITY={name:it.label,label:it.label}; inp.value=it.label; }   // city name stays in the box so it's visible; editing the box clears it
+    else{ inp.value=""; $(it.kind==="county"?"f-county":"f-planning").value=it.label; }
+    refresh(); flyToFilter(p=>p[fld]===it.label);
   } else if(it.kind==="canalgroup"){
     clearPlace(true); const ids=new Set(it.ids);
     if(it.ids.length>1){ inp.value=it.label; refresh(); }   // several canals share the name: show them all
@@ -867,7 +868,7 @@ function requestInfo(){
   const mode=(src && src.value==="cart")?"Selected canals":"Current filter results";
   const set=requestSourceSet();
   const acres=set.reduce((s,d)=>s+(d.props.area_acres||0),0);
-  const filt=[["County","f-county"],["City","f-city"],["District","f-district"],["Planning unit","f-planning"],["Size","f-size"],["Form","f-form"],["Receiving waters","f-recwater"],["Connectivity","f-connec"],["Search","f-search"]]
+  const filt=[["County","f-county"],["District","f-district"],["Planning unit","f-planning"],["Size","f-size"],["Form","f-form"],["Receiving waters","f-recwater"],["Connectivity","f-connec"],["Search","f-search"]]
     .map(([lab,id])=>{const v=$(id).value;return v?lab+": "+(id==="f-district"?(WMD_LABELS[v]||v):v):null;}).filter(Boolean).join("; ")||"none";
   let list=set;
   const capped=(mode==="Current filter results" && set.length>200);
@@ -880,7 +881,7 @@ function requestScopeText(){
   const mode=(src && src.value==="cart")?"Selected canals":"Current filter results";
   const set=requestSourceSet();
   const acres=set.reduce((s,d)=>s+(d.props.area_acres||0),0);
-  const filt=[["County","f-county"],["City","f-city"],["District","f-district"],["Planning unit","f-planning"],["Size","f-size"],["Form","f-form"],["Receiving waters","f-recwater"],["Connectivity","f-connec"],["Search","f-search"]]
+  const filt=[["County","f-county"],["District","f-district"],["Planning unit","f-planning"],["Size","f-size"],["Form","f-form"],["Receiving waters","f-recwater"],["Connectivity","f-connec"],["Search","f-search"]]
     .map(([lab,id])=>{const v=$(id).value;return v?lab+": "+(id==="f-district"?(WMD_LABELS[v]||v):v):null;}).filter(Boolean).join("; ")||"none";
   let ids=set.map(d=>d.props.CHAWQ_ID);
   const capped=(mode==="Current filter results" && ids.length>50);
@@ -962,19 +963,12 @@ async function boot(){
 
   // populate dropdowns
   const counties=[...new Set(DATA.map(d=>d.props.County))].sort();
-  const cities=[...new Set(DATA.map(d=>d.props.City).filter(v=>v!==null&&v!==undefined&&v!==""))].sort((a,b)=>(a==="Unincorporated")-(b==="Unincorporated")||a.localeCompare(b));
   const districts=WMD_ORDER.filter(k=>DATA.some(d=>d.props.WMDNAME===k));
   const plans=[...new Set(DATA.map(d=>d.props.PLANNING_U))].sort();
   const forms=[...new Set(DATA.map(d=>attr(d.props,"TYP_FORM")).filter(v=>v!==null&&v!==undefined&&v!=="").map(String))].sort();
   const recwaters=[...new Set(DATA.map(d=>attr(d.props,"TYP_RECWATER")).filter(v=>v!==null&&v!==undefined&&v!=="").map(String))].sort();
   const connections=[...new Set(DATA.map(d=>attr(d.props,"TYP_CONNEC")).filter(v=>v!==null&&v!==undefined&&v!=="").map(String))].sort();
   fillSelect("f-county",counties);
-  fillSelect("f-city",cities);
-  if(!cities.length){
-    const citySelect=$("f-city");
-    citySelect.disabled=true;
-    citySelect.options[0].textContent="Unavailable in source data";
-  }
   fillSelect("f-district",districts,k=>WMD_LABELS[k]||k);
   fillSelect("f-planning",plans);
   fillSelect("f-size",SIZE_CLASSES.map(s=>s.key));
@@ -989,13 +983,13 @@ async function boot(){
   if(document.fonts&&document.fonts.ready){document.fonts.ready.then(()=>{[chCounty,chDistrict,chSize].forEach(c=>{try{c.resize();c.update();}catch(e){}});});}
 
   // events
-  ["f-county","f-city","f-district","f-planning","f-size","f-form","f-recwater","f-connec"].forEach(id=>$(id).addEventListener("input",refresh));
+  ["f-county","f-district","f-planning","f-size","f-form","f-recwater","f-connec"].forEach(id=>$(id).addEventListener("input",refresh));
   initSearch();
   $("f-colorby").addEventListener("change",()=>{buildColorScale();applyMapStyles();});
   $("f-palette").addEventListener("change",()=>{COLOR_OVERRIDES={};buildColorScale();applyMapStyles();});
   $("f-view").addEventListener("change",recompute);
   $("f-reset").addEventListener("click",()=>{
-    ["f-search","f-county","f-city","f-district","f-planning","f-size","f-form","f-recwater","f-connec"].forEach(id=>$(id).value="");
+    ["f-search","f-county","f-district","f-planning","f-size","f-form","f-recwater","f-connec"].forEach(id=>$(id).value="");
     $("f-view").checked=false; SELECTED=null; MAP.closePopup(); clearPlace(false); closePanel(); refresh();
     try{ MAP.flyToBounds(LAYER.getBounds(),{padding:[20,20]}); }catch(e){}
   });
