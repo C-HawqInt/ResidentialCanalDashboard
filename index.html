@@ -114,6 +114,24 @@ button.primary{padding:8px 12px;border:1px solid var(--blue);background:var(--bl
 .leaflet-popup-content .pk{color:var(--muted)}
 .leaflet-popup-content b{color:var(--blue)}
 .leaflet-popup-content h4{margin:0 0 6px;font-family:"Poppins",sans-serif;color:var(--blue);font-size:14px}
+
+/* Search box + suggestions */
+.searchwrap{position:relative}
+#f-search{min-width:270px}
+.sr-panel{position:absolute;left:0;top:calc(100% + 4px);width:max(100%,400px);max-width:min(460px,calc(100vw - 32px));max-height:440px;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(31,57,109,.16);z-index:1300}
+.sr-h{padding:8px 12px 4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
+.sr-it{display:flex;gap:10px;align-items:flex-start;padding:7px 12px;cursor:pointer}
+.sr-it:hover,.sr-it.act{background:#e6f4fb}
+.sr-ic{flex:none;color:var(--green);margin-top:1px}
+.sr-tx{display:flex;flex-direction:column;min-width:0}
+.sr-main{font-size:13px;font-weight:600;color:var(--blue)}
+.sr-sub{font-size:11.5px;color:var(--muted)}
+.sr-msg{padding:8px 12px;font-size:12px;color:var(--muted)}
+.sr-ft{padding:7px 12px;border-top:1px solid var(--line);font-size:10.5px;color:var(--muted)}
+.sr-panel mark{background:#fff3b0;color:inherit;padding:0;border-radius:2px}
+.pin{display:block;position:relative;width:26px;height:26px;border-radius:50% 50% 50% 0;background:var(--blue);border:3px solid #fff;transform:rotate(-45deg);box-shadow:0 2px 6px rgba(0,0,0,.35)}
+.pin::after{content:"";position:absolute;inset:5px;background:#fff;border-radius:50%}
+#place-clear{color:var(--green);cursor:pointer}
 </style>
 </head>
 <body>
@@ -139,7 +157,10 @@ button.primary{padding:8px 12px;border:1px solid var(--blue);background:var(--bl
 
   <!-- Filters -->
   <div class="filters">
-    <div class="fgrp"><label>Search waterbody / ID</label><input type="search" id="f-search" placeholder="e.g. Stock Island, 1024"></div>
+    <div class="fgrp searchwrap" id="srwrap"><label for="f-search">Search city, waterbody, place or ID</label>
+      <input type="search" id="f-search" placeholder="e.g. Stock Island, Cape Coral, 1024" autocomplete="off" spellcheck="false" enterkeyhint="search" role="combobox" aria-expanded="false" aria-controls="sr-panel" aria-autocomplete="list">
+      <div class="sr-panel" id="sr-panel" role="listbox" hidden></div>
+    </div>
     <div class="fgrp"><label>County</label><select id="f-county"><option value="">All counties</option></select></div>
     <div class="fgrp"><label>City / municipality</label><select id="f-city"><option value="">All cities</option></select></div>
     <div class="fgrp"><label>Water management district</label><select id="f-district"><option value="">All districts</option></select></div>
@@ -182,12 +203,12 @@ button.primary{padding:8px 12px;border:1px solid var(--blue);background:var(--bl
     </div>
   </div>
 
-  <div class="help"><b>How to use:</b> Filter with the dropdowns, the search box, or by clicking a bar in the charts below. Click any canal on the map for its details and to add it to your request selection. Recolor canals from the legend under the map, switch between map and satellite at the map's top-right, and use &ldquo;Request shapefiles&rdquo; to have your selection emailed to you. Reset clears everything and returns to the full statewide view.</div>
+  <div class="help"><b>How to use:</b> Filter with the dropdowns, the search box, or by clicking a bar in the charts below. The search box suggests cities, counties, canal names and any place in Florida as you type, and forgives typos and abbreviations (try &ldquo;Ft Myers&rdquo; or &ldquo;Sanibal&rdquo;). Click any canal on the map for its details and to add it to your request selection. Recolor canals from the legend under the map, switch between map and satellite at the map's top-right, and use &ldquo;Request shapefiles&rdquo; to have your selection emailed to you. Reset clears everything and returns to the full statewide view.</div>
 
   <!-- Sidebar + Map -->
   <div class="grid">
     <div class="panel">
-      <div class="ptitle"><h2>Canal list</h2><div class="sub" id="list-sub">—</div><div class="hint">Sorted largest first &middot; click a row to zoom to it</div></div>
+      <div class="ptitle"><h2>Canal list</h2><div class="sub" id="list-sub">—</div><div class="hint">Sorted largest first (best match first while searching) &middot; click a row to zoom to it</div></div>
       <div class="listwrap" id="listwrap"></div>
     </div>
     <div>
@@ -211,7 +232,7 @@ button.primary{padding:8px 12px;border:1px solid var(--blue);background:var(--bl
   <h3>Data source</h3>
   <p>Geometry and attributes are loaded from the ResCanals typology shapefile archive. Form (TYP_FORM), receiving waters (TYP_RECWATER), and connectivity (TYP_CONNEC) are available as filters and map color dimensions; all other source attributes are available in feature popups.</p>
   <h3>Notes</h3>
-  <p>An internet connection is required for the basemap tiles and mapping libraries. Questions about the data or brand use: Nathan Hewitt (<a href="mailto:nathan@chawq.org">nathan@chawq.org</a>).</p>
+  <p>An internet connection is required for the basemap tiles and mapping libraries. Place search sends the text you type to the free Photon and Nominatim geocoding services (OpenStreetMap data, &copy; OpenStreetMap contributors), limited to Florida; canal, city and county matches run entirely in your browser. Questions about the data or brand use: Nathan Hewitt (<a href="mailto:nathan@chawq.org">nathan@chawq.org</a>).</p>
 </div>
 
 <script>
@@ -266,7 +287,7 @@ const fmt3 = n => n.toLocaleString(undefined,{maximumFractionDigits:3});
 
 function effectiveFilters(){
   return {
-    search:  $("f-search").value.trim().toLowerCase(),
+    search:  currentSearchText(),
     county:  $("f-county").value,
     city:    $("f-city").value,
     district:$("f-district").value,
@@ -277,8 +298,7 @@ function effectiveFilters(){
     connec:  $("f-connec").value,
   };
 }
-function matchesFilters(p){
-  const f = effectiveFilters();
+function matchesFilters(p,d,f){
   if(f.county   && p.County!==f.county) return false;
   if(f.city     && p.City!==f.city) return false;
   if(f.district && p.WMDNAME!==f.district) return false;
@@ -287,10 +307,7 @@ function matchesFilters(p){
   if(f.form     && String(attr(p,"TYP_FORM")??"")!==f.form) return false;
   if(f.recwater && String(attr(p,"TYP_RECWATER")??"")!==f.recwater) return false;
   if(f.connec   && String(attr(p,"TYP_CONNEC")??"")!==f.connec) return false;
-  if(f.search){
-    const hay = ((p.WATERBODY_||"")+" "+(p.County||"")+" "+(p.City||"")+" "+(p.CHAWQ_ID||"")+" "+(p.WBID||"")).toLowerCase();
-    if(!hay.includes(f.search)) return false;
-  }
+  if(SEARCH_CTX && !(d._qs>0)) return false;
   return true;
 }
 
@@ -380,7 +397,7 @@ function updateKPIs(set){
 // ---- List ----
 const LIST_CAP=300;
 function updateList(set){
-  const sorted=[...set].sort((a,b)=>b.props.area_acres-a.props.area_acres);
+  const sorted=[...set].sort((a,b)=> SEARCH_CTX ? ((b._qs-a._qs)||(b.props.area_acres-a.props.area_acres)) : (b.props.area_acres-a.props.area_acres));
   const shown=sorted.slice(0,LIST_CAP);
   const wrap=$("listwrap");
   wrap.innerHTML = shown.map(d=>{
@@ -388,9 +405,10 @@ function updateList(set){
     return `<div class="listrow ${p.CHAWQ_ID===SELECTED?'sel':''}" data-id="${p.CHAWQ_ID}">
       <div class="nm">${p.WATERBODY_||"(unnamed)"}</div>
       <div class="mt">${p.County} Co. · ${fmt1(p.area_acres)} ac · ID ${p.CHAWQ_ID}</div></div>`;
-  }).join("") || `<div class="listnote">No canals match the current filters.</div>`;
+  }).join("") || `<div class="listnote">${PLACE?"No mapped canals in this view. Zoom out, or clear the place to see all canals.":SEARCH_CTX?"No canal records match that search. Pick a place from the suggestions to jump to it on the map.":"No canals match the current filters."}</div>`;
   if(sorted.length>LIST_CAP) wrap.innerHTML+=`<div class="listnote">Showing the ${LIST_CAP} largest of ${fmt(sorted.length)} matching canals. Refine filters or search to narrow.</div>`;
-  $("list-sub").textContent=`${fmt(set.length)} canal${set.length===1?"":"s"} match current view`;
+  if(PLACE) $("list-sub").innerHTML=`${fmt(set.length)} canal${set.length===1?"":"s"} in view near <b>${escapeHTML(PLACE.label)}</b> &middot; <a id="place-clear">clear place</a>`;
+  else $("list-sub").textContent=`${fmt(set.length)} canal${set.length===1?"":"s"} match current view`;
   wrap.querySelectorAll(".listrow").forEach(r=>r.onclick=()=>selectCanal(+r.dataset.id,true));
 }
 
@@ -481,7 +499,10 @@ function updateExportCounts(){
 // ---- main refresh ----
 function refresh(){
   buildColorScale();
-  DATA.forEach(d=>d._match=matchesFilters(d.props));
+  const f=effectiveFilters();
+  SEARCH_CTX = f.search ? getCtx(f.search) : null;
+  const sc = SEARCH_CTX ? scoresFor(SEARCH_CTX) : null;
+  DATA.forEach((d,i)=>{ d._qs = sc ? sc[i] : 0; d._match=matchesFilters(d.props,d,f); });
   applyMapStyles();
   recompute();
 }
@@ -489,6 +510,345 @@ function recompute(){
   const set=effectiveSet();
   updateKPIs(set); updateList(set); updateCharts(set);
   const fc=$("em-fcount"); if(fc) fc.textContent=fmt(set.length);
+}
+
+// =====================================================================
+// SEARCH: forgiving local matching + Florida-only place lookup
+// =====================================================================
+const FL_BBOX={w:-87.64,s:24.40,e:-79.97,n:31.01};
+const STOPWORDS=new Set(["county","co","city","of","the","and","fl","fla","florida","usa"]);
+const ALIASES={st:["saint","street"],saint:["st"],ft:["fort"],fort:["ft"],pt:["point"],point:["pt"],mt:["mount"],mount:["mt"],
+  isl:["island"],island:["isl"],bch:["beach"],beach:["bch"],hbr:["harbor","harbour"],harbor:["harbour","hbr"],harbour:["harbor","hbr"],
+  ctr:["center","centre"],center:["centre","ctr"],centre:["center"],cswy:["causeway"],causeway:["cswy"],lk:["lake"],lake:["lk"]};
+let SEARCH_CTX=null, VOCAB=[], GEO={cities:[],counties:[],plans:[]}, PLACE=null, PLACE_MARKER=null, searchT=null;
+const SR={q:"",local:{cities:[],counties:[],plans:[],canals:[]},places:[],pstate:"idle",flat:[],act:-1,open:false};
+
+function norm(s){
+  return String(s==null?"":s).normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase()
+    .replace(/&/g," and ").replace(/['’`.]/g,"").replace(/[^a-z0-9]+/g," ").trim();
+}
+function toks(){
+  const out=new Set();
+  for(const v of arguments){ const n=norm(v); if(n) n.split(" ").forEach(t=>out.add(t)); }
+  return [...out];
+}
+const isDigits=s=>/^\d+$/.test(s);
+
+// Damerau-Levenshtein (adjacent swaps count as one edit) with early exit
+function editDist(a,b,max){
+  const al=a.length, bl=b.length;
+  if(Math.abs(al-bl)>max) return max+1;
+  let prev2=null, prev=new Array(bl+1), cur=new Array(bl+1);
+  for(let j=0;j<=bl;j++) prev[j]=j;
+  for(let i=1;i<=al;i++){
+    cur[0]=i; let rowMin=i;
+    for(let j=1;j<=bl;j++){
+      const cost=a.charCodeAt(i-1)===b.charCodeAt(j-1)?0:1;
+      let v=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+cost);
+      if(i>1&&j>1&&a.charCodeAt(i-1)===b.charCodeAt(j-2)&&a.charCodeAt(i-2)===b.charCodeAt(j-1)) v=Math.min(v,prev2[j-2]+1);
+      cur[j]=v; if(v<rowMin) rowMin=v;
+    }
+    if(rowMin>max) return max+1;
+    prev2=prev; prev=cur; cur=new Array(bl+1);
+  }
+  return prev[bl];
+}
+// how well does query word a match vocabulary word v? 0 = no match
+function tokScore(a,v){
+  if(v===a) return 100;
+  const da=isDigits(a);
+  if(da!==isDigits(v)) return 0;
+  if(v.startsWith(a)) return a.length>=2?85:70;
+  if(da) return 0;
+  if(a.length>=3 && v.includes(a)) return 60;
+  if(a.length>=4){
+    const lim=a.length>=8?2:1;
+    let d=editDist(a,v,lim); if(d<=lim) return 50-d*8;
+    if(v.length>a.length){ d=editDist(a,v.slice(0,a.length),lim); if(d<=lim) return 45-d*8; }
+  }
+  return 0;
+}
+let VCACHE=new Map();
+function vocabScores(alts){
+  const key=alts.join("|"); if(VCACHE.has(key)) return VCACHE.get(key);
+  const m=new Map();
+  for(const v of VOCAB){ let best=0; for(const a of alts){ const s=tokScore(a,v); if(s>best) best=s; } if(best) m.set(v,best); }
+  if(VCACHE.size>300) VCACHE=new Map();
+  VCACHE.set(key,m); return m;
+}
+let _ctxKey=null,_ctxVal=null;
+function getCtx(text){
+  const qt=norm(text).split(" ").filter(t=>t&&!STOPWORDS.has(t));
+  const key=qt.join(" ");
+  if(key===_ctxKey) return _ctxVal;
+  _ctxKey=key;
+  _ctxVal=qt.length?{q:key,qt,joined:key.replace(/ /g,""),scores:null,maps:qt.map(t=>vocabScores([t,...(ALIASES[t]||[])]))}:null;
+  return _ctxVal;
+}
+// every query word must match something; "fortmyers" also matches "Fort Myers"
+function scoreTokens(ctx,tok,joined){
+  let total=0;
+  for(const m of ctx.maps){
+    let best=0;
+    for(let i=0;i<tok.length;i++){ const s=m.get(tok[i]); if(s>best){ best=s; if(s===100) break; } }
+    if(!best) return (ctx.joined.length>=4 && joined.includes(ctx.joined))?55:0;
+    total+=best;
+  }
+  return total/ctx.maps.length;
+}
+function scoreFeature(ctx,d){
+  let s=scoreTokens(ctx,d._tok,d._joined);
+  if(s>0 && d._name.startsWith(ctx.q)) s+=10;
+  return s;
+}
+function scoresFor(ctx){
+  if(!ctx.scores) ctx.scores=DATA.map(d=>scoreFeature(ctx,d));
+  return ctx.scores;
+}
+function indexData(){
+  const vocab=new Set(), cities=new Map(), counties=new Map(), plans=new Map();
+  const bump=(map,key,acres)=>{ if(!key) return; let g=map.get(key); if(!g){ g={name:key,count:0,acres:0}; map.set(key,g); } g.count++; g.acres+=acres; };
+  DATA.forEach(d=>{
+    const p=d.props, name=attr(p,"WATERBODY_")||"", county=p.County||"", city=p.City||"", plan=p.PLANNING_U||"";
+    const ids=[p.CHAWQ_ID,p.WBID], ac=p.area_acres||0;
+    d._name=norm(name);
+    d._ntok=toks(name,...ids); d._njoined=d._ntok.join("");
+    d._tok=toks(name,county,city,plan,p.WMDNAME,...ids); d._joined=d._tok.join("");
+    d._tok.forEach(t=>vocab.add(t));
+    bump(cities,city,ac); bump(counties,county,ac); bump(plans,plan,ac);
+  });
+  const mk=m=>[...m.values()].map(g=>({...g,nm:norm(g.name),tok:toks(g.name),joined:toks(g.name).join("")}));
+  GEO={cities:mk(cities),counties:mk(counties),plans:mk(plans)};
+  VOCAB=[...vocab]; VCACHE=new Map(); _ctxKey=null;
+}
+function currentSearchText(){
+  const v=$("f-search").value.trim();
+  if(PLACE){ if(v===PLACE.label) return ""; clearPlace(false); }
+  return v;
+}
+
+// ---- local suggestions (cities, counties, planning units, canals) ----
+function localSuggest(text){
+  const out={cities:[],counties:[],plans:[],canals:[]};
+  const ctx=getCtx(text); if(!ctx) return out;
+  const rank=(list,n)=>list.map(e=>({e,s:scoreTokens(ctx,e.tok,e.joined)+(e.nm.startsWith(ctx.q)?10:0)}))
+    .filter(x=>x.s>0).sort((a,b)=>b.s-a.s||b.e.count-a.e.count).slice(0,n).map(x=>x.e);
+  out.cities=rank(GEO.cities,4).map(e=>({kind:"city",label:e.name,count:e.count,acres:e.acres}));
+  out.counties=rank(GEO.counties,3).map(e=>({kind:"county",label:e.name,count:e.count,acres:e.acres}));
+  out.plans=rank(GEO.plans,3).map(e=>({kind:"plan",label:e.name,count:e.count,acres:e.acres}));
+  const sc=scoresFor(ctx), numeric=ctx.qt.length===1&&isDigits(ctx.qt[0]), groups=new Map(), singles=[];
+  DATA.forEach((d,i)=>{
+    if(sc[i]<=0) return;
+    const ns=scoreTokens(ctx,d._ntok,d._njoined); if(ns<=0) return;
+    const p=d.props, nm=attr(p,"WATERBODY_")||"";
+    if(numeric){ singles.push({kind:"canalgroup",label:nm||"Unnamed canal",county:p.County,ids:[p.CHAWQ_ID],acres:p.area_acres||0,top:p.CHAWQ_ID,best:ns,idLabel:true}); return; }
+    if(!d._name) return;
+    const k=d._name+"|"+p.County; let g=groups.get(k);
+    if(!g){ g={kind:"canalgroup",label:nm,county:p.County,ids:[],acres:0,top:p.CHAWQ_ID,topAc:-1,best:0}; groups.set(k,g); }
+    g.ids.push(p.CHAWQ_ID); g.acres+=p.area_acres||0; g.best=Math.max(g.best,ns+(d._name.startsWith(ctx.q)?10:0));
+    if((p.area_acres||0)>g.topAc){ g.topAc=p.area_acres||0; g.top=p.CHAWQ_ID; }
+  });
+  out.canals=(numeric?singles:[...groups.values()]).sort((a,b)=>b.best-a.best||b.acres-a.acres).slice(0,5);
+  return out;
+}
+
+// ---- Florida place lookup (Photon first, Nominatim as backup) ----
+const geoCache=new Map(); let geoCtl=null, geoT=null;
+const inFlorida=(lat,lon)=>lat>=FL_BBOX.s&&lat<=FL_BBOX.n&&lon>=FL_BBOX.w&&lon<=FL_BBOX.e;
+const TYPE_LABELS={city:"City",town:"Town",village:"Village",hamlet:"Hamlet",suburb:"Neighborhood",neighbourhood:"Neighborhood",quarter:"Neighborhood",
+  island:"Island",islet:"Island",county:"County",residential:"Street",water:"Water",bay:"Bay",beach:"Beach",canal:"Canal",river:"River",park:"Park",
+  marina:"Marina",harbour:"Harbor",house:"Address",yes:"Address",locality:"Locality",administrative:"Area",street:"Street",district:"District"};
+function prettyType(v){ v=String(v||""); return TYPE_LABELS[v]||(v?v.replace(/_/g," ").replace(/^\w/,c=>c.toUpperCase()):"Place"); }
+function uniqJoin(a){ const s=new Set(); return a.filter(x=>x&&!s.has(x)&&s.add(x)).join(", "); }
+async function photonSearch(q,signal){
+  let url="https://photon.komoot.io/api/?q="+encodeURIComponent(q)+"&limit=10&lang=en&bbox="+[FL_BBOX.w,FL_BBOX.s,FL_BBOX.e,FL_BBOX.n].join(",");
+  if(MAP.getZoom()>=9){ const c=MAP.getCenter(); url+="&lat="+c.lat.toFixed(4)+"&lon="+c.lng.toFixed(4); }
+  const r=await fetch(url,{signal}); if(!r.ok) throw new Error("HTTP "+r.status);
+  const j=await r.json(), seen=new Set(), out=[];
+  for(const f of (j.features||[])){
+    const p=f.properties||{}, g=f.geometry&&f.geometry.coordinates; if(!g) continue;
+    const lon=g[0], lat=g[1];
+    if(!inFlorida(lat,lon) || (p.state && p.state!=="Florida")) continue;
+    const street=[p.housenumber,p.street].filter(Boolean).join(" ");
+    const label=p.name||street||p.city||p.county||""; if(!label) continue;
+    const sub=prettyType(p.osm_value||p.type)+" · "+uniqJoin([p.name&&street?street:"",p.district,p.city!==label?p.city:"",p.county,"FL"]);
+    const k=label+"|"+sub; if(seen.has(k)) continue; seen.add(k);
+    const e=p.extent; const bounds=e&&e.length===4?L.latLngBounds([e[3],e[0]],[e[1],e[2]]):null;
+    out.push({kind:"place",label,sub,lat,lon,bounds});
+  }
+  return out;
+}
+async function nominatimSearch(q,signal){
+  const url="https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=8&countrycodes=us&bounded=1&viewbox="+
+    [FL_BBOX.w,FL_BBOX.n,FL_BBOX.e,FL_BBOX.s].join(",")+"&q="+encodeURIComponent(q);
+  const r=await fetch(url,{signal}); if(!r.ok) throw new Error("HTTP "+r.status);
+  const j=await r.json(), seen=new Set(), out=[];
+  for(const x of j){
+    const lat=+x.lat, lon=+x.lon;
+    if(!inFlorida(lat,lon) || (x.address&&x.address.state&&x.address.state!=="Florida")) continue;
+    const parts=String(x.display_name||"").split(", ");
+    const label=x.name||parts[0]; if(!label) continue;
+    const rest=parts.slice(1).filter(s=>!/^United States$|^\d{5}/.test(s)).slice(0,3).join(", ");
+    const sub=prettyType(x.type)+" · "+rest;
+    const k=label+"|"+sub; if(seen.has(k)) continue; seen.add(k);
+    const b=x.boundingbox; const bounds=b&&b.length===4?L.latLngBounds([+b[0],+b[2]],[+b[1],+b[3]]):null;
+    out.push({kind:"place",label,sub,lat,lon,bounds});
+  }
+  return out;
+}
+// opts.explicit: user pressed Enter (also try the backup service if empty); opts.backup: use Nominatim only; opts.pickFirst: jump to top result
+async function runGeocode(text,opts){
+  opts=opts||{}; clearTimeout(geoT);
+  if(geoCtl) geoCtl.abort();
+  const ctl=geoCtl=new AbortController();
+  const key=text.toLowerCase()+(opts.backup?"|b":"");
+  SR.q=text; SR.pstate="loading"; renderPanel();
+  try{
+    let res=geoCache.get(key);
+    if(res && !res.length && opts.explicit && !opts.backup) res=null;   // an empty typing lookup shouldn't block the backup service on Enter
+    if(!res){
+      if(opts.backup) res=await nominatimSearch(text,ctl.signal);
+      else{
+        try{ res=await photonSearch(text,ctl.signal); }
+        catch(e){ if(e.name==="AbortError"||!opts.explicit) throw e; res=[]; }
+        if(!res.length && opts.explicit) res=await nominatimSearch(text,ctl.signal);
+      }
+      if(geoCache.size>100) geoCache.clear();
+      geoCache.set(key,res);
+    }
+    if(ctl!==geoCtl || $("f-search").value.trim()!==text) return;
+    SR.places=res; SR.pstate="done"; renderPanel();
+    if(opts.pickFirst && res.length) pickItem(SR.flat.find(x=>x.kind==="place"));
+  }catch(e){
+    if(e.name==="AbortError") return;
+    SR.places=[]; SR.pstate="error"; renderPanel();
+  }
+}
+
+// ---- dropdown ----
+const svg=p=>`<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+const IC={city:svg('<path d="M4 21V9l6-4v16M10 21V3l10 6v12M2 21h20M14 12h2M14 16h2"/>'),
+  pin:svg('<path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>'),
+  water:svg('<path d="M3 9c2-2 4-2 6 0s4 2 6 0 4-2 6 0M3 15c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/>')};
+function hl(label,text){
+  const words=text.trim().split(/[\s,]+/).filter(w=>w.length>=2).map(w=>w.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).sort((a,b)=>b.length-a.length);
+  if(!words.length) return escapeHTML(label);
+  return String(label).split(new RegExp("("+words.join("|")+")","ig")).map((s,i)=>i%2?`<mark>${escapeHTML(s)}</mark>`:escapeHTML(s)).join("");
+}
+function renderPanel(){
+  const el=$("sr-panel"), inp=$("f-search"), L_=SR.local, flat=[]; let html="";
+  const row=(i,ic,main,sub)=>`<div class="sr-it${i===SR.act?" act":""}" role="option" id="sr-o-${i}" aria-selected="${i===SR.act}" data-i="${i}"><span class="sr-ic">${ic}</span><span class="sr-tx"><span class="sr-main">${main}</span><span class="sr-sub">${sub}</span></span></div>`;
+  const sec=(title,items,build)=>{ if(!items.length) return; html+=`<div class="sr-h">${title}</div>`; items.forEach(it=>{ flat.push(it); html+=build(it,flat.length-1); }); };
+  const stat=it=>`${fmt(it.count)} mapped canal${it.count===1?"":"s"} · ${fmt(it.acres)} ac`;
+  sec("Cities &amp; municipalities",L_.cities,(it,i)=>row(i,IC.city,hl(it.label,SR.q),"Filter canals to this city · "+stat(it)));
+  sec("Counties",L_.counties,(it,i)=>row(i,IC.city,hl(it.label,SR.q)+" County","Filter canals to this county · "+stat(it)));
+  sec("Planning units",L_.plans,(it,i)=>row(i,IC.city,hl(it.label,SR.q),"Filter canals to this planning unit · "+stat(it)));
+  sec("Canals &amp; waterbodies",L_.canals,(it,i)=>row(i,IC.water,hl(it.label,SR.q)+(it.idLabel?` <span class="sr-sub">ID ${escapeHTML(it.top)}</span>`:""),
+    escapeHTML(it.county||"")+" Co. · "+(it.ids.length>1?it.ids.length+" mapped canals · ":"")+fmt1(it.acres)+" ac"));
+  html+=`<div class="sr-h">Places in Florida</div>`;
+  if(SR.pstate==="loading") html+=`<div class="sr-msg"><span class="spin"></span>Searching Florida places…</div>`;
+  else if(SR.pstate==="idle") html+=`<div class="sr-msg">Keep typing to search places across Florida.</div>`;
+  SR.places.forEach(it=>{ flat.push(it); html+=row(flat.length-1,IC.pin,hl(it.label,SR.q),escapeHTML(it.sub)+" · go to place"); });
+  if(SR.pstate==="error"||(SR.pstate==="done"&&!SR.places.length)){
+    html+=`<div class="sr-msg">${SR.pstate==="error"?"Place search is unavailable right now.":"No matching places found."}</div>`;
+    const more={kind:"more"}; flat.push(more);
+    html+=row(flat.length-1,IC.pin,"Try the backup place search","Search OpenStreetMap Nominatim for “"+escapeHTML(SR.q)+"” across Florida");
+  }
+  html+=`<div class="sr-ft">Place search: OpenStreetMap data via Photon / Nominatim, limited to Florida. ↑↓ to move, Enter to choose.</div>`;
+  SR.flat=flat; if(SR.act>=flat.length) SR.act=-1;
+  el.innerHTML=html; el.hidden=false; SR.open=true;
+  inp.setAttribute("aria-expanded","true");
+  inp.setAttribute("aria-activedescendant",SR.act>=0?"sr-o-"+SR.act:"");
+  if(SR.act>=0){ const a=$("sr-o-"+SR.act); if(a) a.scrollIntoView({block:"nearest"}); }
+}
+function closePanel(){
+  SR.open=false; SR.act=-1; clearTimeout(geoT); if(geoCtl) geoCtl.abort();
+  const el=$("sr-panel"); if(el) el.hidden=true;
+  const inp=$("f-search"); if(inp){ inp.setAttribute("aria-expanded","false"); inp.setAttribute("aria-activedescendant",""); }
+}
+function updateSuggestions(){
+  const text=$("f-search").value.trim();
+  if(!text){ closePanel(); return; }
+  SR.q=text; SR.act=-1; SR.local=localSuggest(text);
+  clearTimeout(geoT); if(geoCtl) geoCtl.abort();
+  const key=text.toLowerCase();
+  if(text.length<3){ SR.pstate="idle"; SR.places=[]; }
+  else if(geoCache.has(key)){ SR.places=geoCache.get(key); SR.pstate="done"; }
+  else{ SR.pstate="loading"; SR.places=[]; geoT=setTimeout(()=>runGeocode(text,{}),280); }
+  renderPanel();
+}
+
+// ---- choosing a suggestion ----
+const SELECT_FILTERS=["f-county","f-city","f-district","f-planning","f-size","f-form","f-recwater","f-connec"];
+function clearPlace(uncheckView){
+  PLACE=null;
+  if(PLACE_MARKER){ MAP.removeLayer(PLACE_MARKER); PLACE_MARKER=null; }
+  if(uncheckView) $("f-view").checked=false;
+}
+function pickItem(it){
+  if(!it) return;
+  if(it.kind==="more"){ runGeocode(SR.q,{backup:true,explicit:true}); return; }
+  closePanel();
+  const inp=$("f-search");
+  if(it.kind==="city"||it.kind==="county"||it.kind==="plan"){
+    const id=it.kind==="city"?"f-city":it.kind==="county"?"f-county":"f-planning";
+    const fld=it.kind==="city"?"City":it.kind==="county"?"County":"PLANNING_U";
+    clearPlace(true); inp.value=""; ["f-county","f-city","f-planning"].forEach(x=>$(x).value="");
+    $(id).value=it.label; refresh(); flyToFilter(p=>p[fld]===it.label);
+  } else if(it.kind==="canalgroup"){
+    clearPlace(true); const ids=new Set(it.ids);
+    if(it.ids.length>1){ inp.value=it.label; refresh(); }   // several canals share the name: show them all
+    else{ inp.value=""; refresh(); }
+    if(DATA.some(d=>ids.has(d.props.CHAWQ_ID)&&!d._match)){ SELECT_FILTERS.forEach(x=>$(x).value=""); refresh(); }
+    if(it.ids.length>1) flyToFilter(p=>ids.has(p.CHAWQ_ID)); else selectCanal(it.top,true);
+  } else if(it.kind==="place") goToPlace(it);
+}
+const PIN_ICON=()=>L.divIcon({className:"",html:'<span class="pin"></span>',iconSize:[26,26],iconAnchor:[13,31]});
+function goToPlace(it){
+  clearPlace(false);
+  PLACE={label:it.label}; $("f-search").value=it.label;
+  PLACE_MARKER=L.marker([it.lat,it.lon],{icon:PIN_ICON(),keyboard:false,title:it.label}).addTo(MAP)
+    .bindPopup(`<h4>${escapeHTML(it.label)}</h4><div class="pk">${escapeHTML(it.sub)}</div>`);
+  const b=it.bounds;
+  if(b&&b.isValid()&&!b.getSouthWest().equals(b.getNorthEast())) MAP.flyToBounds(b,{padding:[30,30],maxZoom:16,duration:.7});
+  else MAP.flyTo([it.lat,it.lon],15,{duration:.7});
+  $("f-view").checked=true;   // stats and list describe canals near the place
+  refresh();
+}
+function onSearchInput(){
+  clearTimeout(searchT); searchT=setTimeout(refresh,150);
+  updateSuggestions();
+}
+function onSearchKey(e){
+  const n=SR.flat.length;
+  if(e.key==="ArrowDown"||e.key==="ArrowUp"){
+    e.preventDefault();
+    if(!SR.open){ updateSuggestions(); return; }
+    if(!n) return;
+    SR.act=e.key==="ArrowDown"?(SR.act+1)%n:(SR.act<=0?n-1:SR.act-1);
+    renderPanel();
+  } else if(e.key==="Enter"){
+    e.preventDefault();
+    if(SR.open && SR.act>=0 && SR.flat[SR.act]){ pickItem(SR.flat[SR.act]); return; }
+    const text=e.target.value.trim(); if(!text) return;
+    const ctx=getCtx(text);
+    if(ctx && scoresFor(ctx).some(s=>s>0)){ closePanel(); clearTimeout(searchT); refresh(); }   // canal records match: keep the filter
+    else runGeocode(text,{explicit:true,pickFirst:true});                                       // nothing local: jump to the top place
+  } else if(e.key==="Escape"){ closePanel(); }
+}
+function initSearch(){
+  const inp=$("f-search"), panel=$("sr-panel");
+  inp.addEventListener("input",onSearchInput);
+  inp.addEventListener("keydown",onSearchKey);
+  inp.addEventListener("focus",()=>{ if(inp.value.trim() && !PLACE) updateSuggestions(); });
+  panel.addEventListener("mousedown",e=>e.preventDefault());
+  panel.addEventListener("click",e=>{ const r=e.target.closest(".sr-it"); if(r) pickItem(SR.flat[+r.dataset.i]); });
+  document.addEventListener("click",e=>{ if(!$("srwrap").contains(e.target)) closePanel(); });
+  $("list-sub").addEventListener("click",e=>{
+    if(e.target.id!=="place-clear") return;
+    clearPlace(true); $("f-search").value=""; refresh();
+    try{ MAP.flyToBounds(LAYER.getBounds(),{padding:[20,20]}); }catch(err){}
+  });
 }
 
 // ---- shapefile request (EmailJS) ----
@@ -598,6 +958,7 @@ async function boot(){
     return;
   }
   buildLayer(geo);
+  indexData();
 
   // populate dropdowns
   const counties=[...new Set(DATA.map(d=>d.props.County))].sort();
@@ -628,13 +989,14 @@ async function boot(){
   if(document.fonts&&document.fonts.ready){document.fonts.ready.then(()=>{[chCounty,chDistrict,chSize].forEach(c=>{try{c.resize();c.update();}catch(e){}});});}
 
   // events
-  ["f-search","f-county","f-city","f-district","f-planning","f-size","f-form","f-recwater","f-connec"].forEach(id=>$(id).addEventListener("input",refresh));
+  ["f-county","f-city","f-district","f-planning","f-size","f-form","f-recwater","f-connec"].forEach(id=>$(id).addEventListener("input",refresh));
+  initSearch();
   $("f-colorby").addEventListener("change",()=>{buildColorScale();applyMapStyles();});
   $("f-palette").addEventListener("change",()=>{COLOR_OVERRIDES={};buildColorScale();applyMapStyles();});
   $("f-view").addEventListener("change",recompute);
   $("f-reset").addEventListener("click",()=>{
     ["f-search","f-county","f-city","f-district","f-planning","f-size","f-form","f-recwater","f-connec"].forEach(id=>$(id).value="");
-    $("f-view").checked=false; SELECTED=null; MAP.closePopup(); refresh();
+    $("f-view").checked=false; SELECTED=null; MAP.closePopup(); clearPlace(false); closePanel(); refresh();
     try{ MAP.flyToBounds(LAYER.getBounds(),{padding:[20,20]}); }catch(e){}
   });
   const menu=$("exportmenu");
