@@ -191,14 +191,14 @@ button.primary{padding:8px 12px;border:1px solid var(--blue);background:var(--bl
     <div class="fgrp"><label>Water management district</label><select id="f-district"><option value="">All districts</option></select></div>
     <div class="fgrp"><label>Planning unit</label><select id="f-planning"><option value="">All planning units</option></select></div>
     <div class="fgrp"><label>Size class</label><select id="f-size"><option value="">All sizes</option></select></div>
-    <div class="fgrp"><label>Form</label><select id="f-form"><option value="">All forms</option></select></div>
+    <div class="fgrp"><label>Type</label><select id="f-form"><option value="">All types</option></select></div>
     <div class="fgrp"><label>Receiving waters</label><select id="f-recwater"><option value="">All receiving waters</option></select></div>
     <div class="fgrp"><label>Connectivity</label><select id="f-connec"><option value="">All connectivity types</option></select></div>
     <div class="fgrp"><label>Color canals by</label><select id="f-colorby">
       <option value="WMDNAME">Water management district</option>
       <option value="SIZE">Size class</option>
       <option value="County">County</option>
-      <option value="TYP_FORM">Form</option>
+      <option value="TYP_FORM">Type</option>
       <option value="TYP_RECWATER">Receiving waters</option>
       <option value="TYP_CONNEC">Connectivity</option>
     </select></div>
@@ -265,7 +265,7 @@ button.primary{padding:8px 12px;border:1px solid var(--blue);background:var(--bl
   <h2>About this dashboard</h2>
   <p>This dashboard maps C-HAWQ's statewide residential canal footprint — the network of artificial, residential waterways carved into Florida's coastlines. Each polygon is one mapped canal system with its source attributes, including typology and classification fields. Use the filters and the map together: pan and zoom to a community, click any canal for its details, and turn on "Limit stats to map view" to make the indicators and canal list describe only what's on screen. The charts summarize the canals matching the county, water management district, and size filters, and stay put as you pan and zoom.</p>
   <h3>Data source</h3>
-  <p>Geometry and attributes are loaded from the ResCanals typology shapefile archive. Form (TYP_FORM), receiving waters (TYP_RECWATER), and connectivity (TYP_CONNEC) are available as filters and map color dimensions; all other source attributes are available in feature popups.</p>
+  <p>Geometry and attributes are loaded from the ResCanals typology shapefile archive. Type (TYP_FORM), receiving waters (TYP_RECWATER), and connectivity (TYP_CONNEC) are available as filters and map color dimensions; all other source attributes are available in feature popups.</p>
   <h3>Notes</h3>
   <p>An internet connection is required for the basemap tiles and mapping libraries. Place search sends the text you type to the free Photon and Nominatim geocoding services (OpenStreetMap data, &copy; OpenStreetMap contributors), limited to Florida; canal, city and county matches run entirely in your browser. Questions about the data or brand use: Nathan Hewitt (<a href="mailto:nathan@chawq.org">nathan@chawq.org</a>).</p>
 </div>
@@ -990,7 +990,7 @@ function requestInfo(){
   const mode=(src && src.value==="cart")?"Selected canals":"Current filter results";
   const set=requestSourceSet();
   const acres=set.reduce((s,d)=>s+(d.props.area_acres||0),0);
-  const filt=[["County","f-county"],["District","f-district"],["Planning unit","f-planning"],["Size","f-size"],["Form","f-form"],["Receiving waters","f-recwater"],["Connectivity","f-connec"],["Search","f-search"]]
+  const filt=[["County","f-county"],["District","f-district"],["Planning unit","f-planning"],["Size","f-size"],["Type","f-form"],["Receiving waters","f-recwater"],["Connectivity","f-connec"],["Search","f-search"]]
     .map(([lab,id])=>{const v=$(id).value;return v?lab+": "+(id==="f-district"?(WMD_LABELS[v]||v):v):null;}).filter(Boolean).join("; ")||"none";
   let list=set;
   const capped=(mode==="Current filter results" && set.length>200);
@@ -1003,7 +1003,7 @@ function requestScopeText(){
   const mode=(src && src.value==="cart")?"Selected canals":"Current filter results";
   const set=requestSourceSet();
   const acres=set.reduce((s,d)=>s+(d.props.area_acres||0),0);
-  const filt=[["County","f-county"],["District","f-district"],["Planning unit","f-planning"],["Size","f-size"],["Form","f-form"],["Receiving waters","f-recwater"],["Connectivity","f-connec"],["Search","f-search"]]
+  const filt=[["County","f-county"],["District","f-district"],["Planning unit","f-planning"],["Size","f-size"],["Type","f-form"],["Receiving waters","f-recwater"],["Connectivity","f-connec"],["Search","f-search"]]
     .map(([lab,id])=>{const v=$(id).value;return v?lab+": "+(id==="f-district"?(WMD_LABELS[v]||v):v):null;}).filter(Boolean).join("; ")||"none";
   let ids=set.map(d=>d.props.CHAWQ_ID);
   const capped=(mode==="Current filter results" && ids.length>50);
@@ -1084,14 +1084,14 @@ async function boot(){
   initClearControl();
   let geo;
   try{
-    const archive="ResCanal_Polygons_10132026_WMDs.zip";
+    const archive="ResCanal_Polygons_10212026_WMDs_with_DistZonalStats.zip";
     const res=await fetch(archive);
     if(!res.ok) throw new Error("HTTP "+res.status);
     const parsed=await shp(await res.arrayBuffer());
     geo=parsed?.type==="FeatureCollection" ? parsed : Array.isArray(parsed) ? parsed.find(x=>x?.type==="FeatureCollection") : Object.values(parsed||{}).find(x=>x?.type==="FeatureCollection");
     if(!geo) throw new Error("No shapefile layer found in archive");
   }catch(e){
-    $("listwrap").innerHTML=`<div class="listnote">Could not load <b>ResCanal_Polygons_10132026_WMDs.zip</b> (${e.message}). Put the ZIP beside index.html and serve the folder over HTTP (for example, <code>python -m http.server</code>).</div>`;
+    $("listwrap").innerHTML=`<div class="listnote">Could not load <b>ResCanal_Polygons_10212026_WMDs_with_DistZonalStats.zip</b> (${e.message}). Put the ZIP beside index.html and serve the folder over HTTP (for example, <code>python -m http.server</code>).</div>`;
     return;
   }
   buildLayer(geo);
