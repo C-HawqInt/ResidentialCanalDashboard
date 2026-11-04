@@ -62,8 +62,28 @@ button.primary{padding:8px 12px;border:1px solid var(--blue);background:var(--bl
 #map{height:620px;border-radius:10px;border:1px solid var(--line);z-index:0}
 @media(max-width:900px){#map{height:440px}}
 
+/* Sidebar: canal list on top, request list below (splits 50/50 once something is added) */
+.sidebar{contain:size;min-height:0}
+@media(max-width:900px){.sidebar{contain:none;height:620px}}
+.sbsec{display:flex;flex-direction:column;flex:1 1 0;min-height:0}
+.sbsec[hidden]{display:none}
+#cartsec{border-top:2px solid var(--line)}
+.sbsec .ptitle{flex:none}
+.ptitle .tline{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.linkbtn{background:none;border:none;padding:0;font:inherit;font-size:12px;color:var(--green);cursor:pointer}
+.linkbtn:hover{text-decoration:underline}
+
 /* List */
-.listwrap{max-height:560px;overflow:auto}
+.listwrap{flex:1 1 0;min-height:0;overflow:auto}
+.listrow.cartrow{display:flex;align-items:center;gap:8px}
+.listrow.cartrow .tx{flex:1;min-width:0}
+.listrow.cartrow .cswatch{flex:none;width:11px;height:11px;border-radius:3px;background:#ffd21f;border:1px solid #a07c00}
+.rmbtn{flex:none;width:26px;height:26px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--muted);cursor:pointer;font-size:15px;line-height:1}
+.rmbtn:hover{border-color:#c0504d;color:#c0504d}
+
+/* Map "clear selection" control */
+.map-clear{background:#fff;border:2px solid rgba(0,0,0,.2);border-radius:6px;padding:6px 11px;font:600 12.5px "Open Sans",sans-serif;color:var(--blue);cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.map-clear:hover{border-color:var(--blue)}
 .listrow{padding:9px 14px;border-bottom:1px solid var(--line);cursor:pointer;font-size:13px}
 .listrow:hover{background:#eef6fa}
 .listrow.sel{background:#e6f4fb;box-shadow:inset 3px 0 0 var(--cyan)}
@@ -77,6 +97,10 @@ button.primary{padding:8px 12px;border:1px solid var(--blue);background:var(--bl
 .chartbox h2{margin:0 0 2px;font-size:15px;color:var(--blue)}
 .chartbox .sub{font-size:12px;color:var(--muted);margin-bottom:10px}
 .cc{position:relative;height:240px}
+.chartbar{display:flex;justify-content:flex-end;margin-top:14px}
+.charts.after-bar{margin-top:8px}
+.chhead{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.smallbtn{padding:4px 10px;font-size:12px;flex:none}
 
 /* Legend */
 .legend{display:flex;flex-wrap:wrap;gap:6px 12px;padding:10px 14px;border-top:1px solid var(--line);font-size:12px}
@@ -96,7 +120,9 @@ button.primary{padding:8px 12px;border:1px solid var(--blue);background:var(--bl
 .loading{padding:40px;text-align:center;color:var(--muted);font-size:14px}
 
 .exportwrap{position:relative}
-.exportmenu{position:absolute;right:0;top:calc(100% + 6px);z-index:1200;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(31,57,109,.16);padding:12px;width:250px}
+/* Request menu is position:fixed and placed by positionMenu() so it always stays fully on screen */
+.exportmenu{position:fixed;z-index:2000;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(31,57,109,.16);padding:12px 14px;width:320px;max-width:calc(100vw - 16px);overflow-y:auto}
+.exportmenu .fldlab{display:block;font-size:12px;font-weight:600;color:var(--ink);margin-top:6px}
 .exportmenu .emh{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin:8px 0 4px}
 .exportmenu .emopt{display:flex;align-items:center;gap:7px;font-size:13px;margin:4px 0;cursor:pointer}
 .exportmenu button{width:100%;margin:3px 0;text-align:left}
@@ -190,8 +216,11 @@ button.primary{padding:8px 12px;border:1px solid var(--blue);background:var(--bl
         <button class="ghostbtn" id="em-addfilter">+ Add current results to my selection</button>
         <button class="ghostbtn" id="em-clearcart">Clear selection</button>
         <div class="emh">Your details</div>
-        <input type="text" id="req-name" placeholder="Your name">
-        <input type="email" id="req-email" placeholder="you@example.org">
+        <label class="fldlab" for="req-name">Name</label>
+        <input type="text" id="req-name" placeholder="Your name" autocomplete="name">
+        <label class="fldlab" for="req-email">Email</label>
+        <input type="email" id="req-email" placeholder="you@example.org" autocomplete="email">
+        <label class="fldlab" for="req-purpose">Purpose</label>
         <textarea id="req-purpose" rows="3" placeholder="What will you use the shapefiles for?"></textarea>
         <div class="emh">Send request to</div>
         <div class="emhint">Nathan@CHAWQ.org</div>
@@ -202,13 +231,19 @@ button.primary{padding:8px 12px;border:1px solid var(--blue);background:var(--bl
     </div>
   </div>
 
-  <div class="help"><b>How to use:</b> Filter with the dropdowns, the search box, or by clicking a bar in the charts below. The search box suggests cities, counties, canal names and any place in Florida as you type, and forgives typos and abbreviations (try &ldquo;Ft Myers&rdquo; or &ldquo;Sanibal&rdquo;). Click any canal on the map for its details and to add it to your request selection. Recolor canals from the legend under the map, switch between map and satellite at the map's top-right, and use &ldquo;Request shapefiles&rdquo; to have your selection emailed to you. Reset clears everything and returns to the full statewide view.</div>
+  <div class="help"><b>How to use:</b> Filter with the dropdowns, the search box, or by clicking a bar in the charts below. The search box suggests cities, counties, canal names and any place in Florida as you type, and forgives typos and abbreviations (try &ldquo;Ft Myers&rdquo; or &ldquo;Sanibal&rdquo;). Click any canal on the map for its details and to add it to your request selection; added canals turn yellow and appear under &ldquo;Selected for request&rdquo; beside the map. Use &ldquo;Clear selection&rdquo; on the map (or click a highlighted list row again) to deselect a canal without touching your request list. The charts follow the county, district, and size filters only, not map panning; each has its own Reset. Recolor canals from the legend under the map, switch between map and satellite at the map's top-right, and use &ldquo;Request shapefiles&rdquo; to have your selection emailed to you. Reset clears everything and returns to the full statewide view.</div>
 
   <!-- Sidebar + Map -->
   <div class="grid">
-    <div class="panel">
-      <div class="ptitle"><h2>Canal list</h2><div class="sub" id="list-sub">—</div><div class="hint">Sorted largest first (best match first while searching) &middot; click a row to zoom to it</div></div>
-      <div class="listwrap" id="listwrap"></div>
+    <div class="panel sidebar">
+      <div class="sbsec" id="listsec">
+        <div class="ptitle"><h2>Canal list</h2><div class="sub" id="list-sub">—</div><div class="hint">Sorted largest first (best match first while searching) &middot; click a row to zoom to it, click again to deselect</div></div>
+        <div class="listwrap" id="listwrap"></div>
+      </div>
+      <div class="sbsec" id="cartsec" hidden>
+        <div class="ptitle"><div class="tline"><h2>Selected for request</h2><button class="linkbtn" id="cart-clearall" type="button">Remove all</button></div><div class="sub" id="cart-sub">—</div><div class="hint">Shown in yellow on the map &middot; these are the canals your request will include &middot; &times; removes one</div></div>
+        <div class="listwrap" id="cartwrap"></div>
+      </div>
     </div>
     <div>
       <div id="map"></div>
@@ -217,17 +252,18 @@ button.primary{padding:8px 12px;border:1px solid var(--blue);background:var(--bl
   </div>
 
   <!-- Charts -->
-  <div class="charts">
-    <div class="chartbox"><h2>Canal area by county</h2><div class="sub">Top 15 by total acres &middot; click a bar to filter the map</div><div class="cc"><canvas id="ch-county"></canvas></div></div>
-    <div class="chartbox"><h2>Area by water management district</h2><div class="sub">Total acres per district &middot; click a bar to filter the map</div><div class="cc"><canvas id="ch-district"></canvas></div></div>
-    <div class="chartbox"><h2>Canal size distribution</h2><div class="sub">Polygon count by size class</div><div class="cc"><canvas id="ch-size"></canvas></div></div>
+  <div class="chartbar"><button class="ghostbtn" id="ch-resetall" type="button">Reset all graphs</button></div>
+  <div class="charts after-bar">
+    <div class="chartbox"><div class="chhead"><div><h2>Canal area by county</h2><div class="sub">Top 15 by total acres &middot; click a bar to filter the map</div></div><button class="ghostbtn smallbtn" data-chreset="county" type="button">Reset</button></div><div class="cc"><canvas id="ch-county"></canvas></div></div>
+    <div class="chartbox"><div class="chhead"><div><h2>Area by water management district</h2><div class="sub">Total acres per district &middot; click a bar to filter the map</div></div><button class="ghostbtn smallbtn" data-chreset="district" type="button">Reset</button></div><div class="cc"><canvas id="ch-district"></canvas></div></div>
+    <div class="chartbox"><div class="chhead"><div><h2>Canal size distribution</h2><div class="sub">Polygon count by size class &middot; click a bar to filter the map</div></div><button class="ghostbtn smallbtn" data-chreset="size" type="button">Reset</button></div><div class="cc"><canvas id="ch-size"></canvas></div></div>
   </div>
 
 </div>
 
 <div class="methods">
   <h2>About this dashboard</h2>
-  <p>This dashboard maps C-HAWQ's statewide residential canal footprint — the network of artificial, residential waterways carved into Florida's coastlines. Each polygon is one mapped canal system with its source attributes, including typology and classification fields. Use the filters and the map together: pan and zoom to a community, click any canal for its details, and turn on "Limit stats to map view" to make the indicators and charts describe only what's on screen.</p>
+  <p>This dashboard maps C-HAWQ's statewide residential canal footprint — the network of artificial, residential waterways carved into Florida's coastlines. Each polygon is one mapped canal system with its source attributes, including typology and classification fields. Use the filters and the map together: pan and zoom to a community, click any canal for its details, and turn on "Limit stats to map view" to make the indicators and canal list describe only what's on screen. The charts summarize the canals matching the county, water management district, and size filters, and stay put as you pan and zoom.</p>
   <h3>Data source</h3>
   <p>Geometry and attributes are loaded from the ResCanals typology shapefile archive. Form (TYP_FORM), receiving waters (TYP_RECWATER), and connectivity (TYP_CONNEC) are available as filters and map color dimensions; all other source attributes are available in feature popups.</p>
   <h3>Notes</h3>
@@ -352,15 +388,22 @@ function renderLegend(by){
 // ---- styles ----
 function styleVisible(p){ const c=colorFor(p); return {stroke:true,fill:true,interactive:true,color:c,weight:1,opacity:1,fillColor:c,fillOpacity:.8}; }
 const STYLE_HIDDEN = {stroke:false,fill:false,interactive:false};
-const STYLE_SEL = {color:"#1f396d",weight:2.5,opacity:1,fillColor:"#48c5e3",fillOpacity:.9};
+const STYLE_SEL = {stroke:true,fill:true,interactive:true,color:"#1f396d",weight:2.5,opacity:1,fillColor:"#48c5e3",fillOpacity:.9};
+// Canals in the request list: yellow, always drawn (even when filtered out) until removed from the list
+const STYLE_CART = {stroke:true,fill:true,interactive:true,color:"#a07c00",weight:1.5,opacity:1,fillColor:"#ffd21f",fillOpacity:.9};
+const STYLE_CART_SEL = {stroke:true,fill:true,interactive:true,color:"#1f396d",weight:3,opacity:1,fillColor:"#ffd21f",fillOpacity:.95};
 
 function applyMapStyles(){
+  const front=[];
   DATA.forEach(d=>{
-    const lyr = LAYER_BY_ID[d.props.CHAWQ_ID];
+    const id=d.props.CHAWQ_ID, lyr = LAYER_BY_ID[id];
     if(!lyr) return;
-    if(d._match){ lyr.setStyle(d.props.CHAWQ_ID===SELECTED?STYLE_SEL:styleVisible(d.props)); }
+    if(CART.has(id)){ lyr.setStyle(id===SELECTED?STYLE_CART_SEL:STYLE_CART); front.push(lyr); }
+    else if(d._match){ lyr.setStyle(id===SELECTED?STYLE_SEL:styleVisible(d.props)); if(id===SELECTED) front.push(lyr); }
     else lyr.setStyle(STYLE_HIDDEN);
   });
+  front.forEach(l=>{ try{ l.bringToFront(); }catch(e){} });
+  updateClearControl();
 }
 
 // ---- the set the stats/list describe ----
@@ -408,7 +451,44 @@ function updateList(set){
   if(sorted.length>LIST_CAP) wrap.innerHTML+=`<div class="listnote">Showing the ${LIST_CAP} largest of ${fmt(sorted.length)} matching canals. Refine filters or search to narrow.</div>`;
   if(PLACE) $("list-sub").innerHTML=`${fmt(set.length)} canal${set.length===1?"":"s"} in view near <b>${escapeHTML(PLACE.label)}</b> &middot; <a id="place-clear">clear place</a>`;
   else $("list-sub").textContent=`${fmt(set.length)} canal${set.length===1?"":"s"} match current view`;
-  wrap.querySelectorAll(".listrow").forEach(r=>r.onclick=()=>selectCanal(+r.dataset.id,true));
+  // click a row to select + zoom; click the selected row again to deselect
+  wrap.querySelectorAll(".listrow").forEach(r=>r.onclick=()=>{ const id=+r.dataset.id; if(id===SELECTED) clearSelection(); else selectCanal(id,true); });
+}
+
+// ---- Request list (lower half of the sidebar) ----
+const CART_CAP=300;
+function updateCartList(){
+  const sec=$("cartsec"), wrap=$("cartwrap");
+  if(!CART.size){ sec.hidden=true; wrap.innerHTML=""; return; }
+  sec.hidden=false;
+  const items=DATA.filter(d=>CART.has(d.props.CHAWQ_ID)).sort((a,b)=>b.props.area_acres-a.props.area_acres);
+  const acres=items.reduce((s,d)=>s+(d.props.area_acres||0),0);
+  $("cart-sub").textContent=`${fmt(items.length)} canal${items.length===1?"":"s"} · ${fmt1(acres)} ac`;
+  wrap.innerHTML=items.slice(0,CART_CAP).map(d=>{
+    const p=d.props;
+    return `<div class="listrow cartrow ${p.CHAWQ_ID===SELECTED?'sel':''}" data-id="${p.CHAWQ_ID}">
+      <span class="cswatch"></span>
+      <div class="tx"><div class="nm">${escapeHTML(p.WATERBODY_||"(unnamed)")}</div>
+      <div class="mt">${escapeHTML(p.County)} Co. · ${fmt1(p.area_acres)} ac · ID ${p.CHAWQ_ID}</div></div>
+      <button class="rmbtn" type="button" data-rm="${p.CHAWQ_ID}" title="Remove from request" aria-label="Remove canal ${p.CHAWQ_ID} from request">&times;</button></div>`;
+  }).join("");
+  if(items.length>CART_CAP) wrap.innerHTML+=`<div class="listnote">Showing the ${CART_CAP} largest of ${fmt(items.length)} selected canals. All ${fmt(items.length)} are included in your request.</div>`;
+  wrap.querySelectorAll(".cartrow").forEach(r=>r.onclick=e=>{
+    const rm=e.target.closest("[data-rm]");
+    if(rm){ e.stopPropagation(); removeFromCart(+rm.dataset.rm); return; }
+    const id=+r.dataset.id; if(id===SELECTED) clearSelection(); else selectCanal(id,true);
+  });
+}
+function removeFromCart(id){ if(CART.delete(id)) cartChanged([id]); }
+function cartChanged(ids){
+  updateExportCounts(); updateCartList(); applyMapStyles();
+  // keep an open popup's add/remove button in sync
+  (ids||[]).forEach(id=>{
+    const lyr=LAYER_BY_ID[id];
+    if(lyr && lyr.isPopupOpen && lyr.isPopupOpen()){ const pr=lyr.feature&&lyr.feature.properties; if(pr) lyr.setPopupContent(popupHTML(pr)); }
+  });
+  // requests default to the hand-picked list whenever it has canals
+  const want=CART.size?"cart":"filter", r=document.querySelector(`input[name=emsrc][value=${want}]`); if(r) r.checked=true;
 }
 
 // ---- Charts ----
@@ -425,24 +505,53 @@ function flyToFilter(pred){
 }
 function countyChartClick(e,els){ if(!els.length) return; const c=chCounty.data.labels[els[0].index]; $("f-county").value=c; refresh(); flyToFilter(p=>p.County===c); }
 function districtChartClick(e,els){ if(!els.length) return; const code=(chDistrict._codes||[])[els[0].index]; if(!code) return; $("f-district").value=code; refresh(); flyToFilter(p=>p.WMDNAME===code); }
-function updateCharts(set){
-  // county total area (acres)
+function sizeChartClick(e,els){ if(!els.length) return; const k=chSize.data.labels[els[0].index]; $("f-size").value=k; refresh(); }
+// Charts describe ONLY the county / district / size selections. Panning, zooming, search, and the other
+// filters never change them. Each chart's Reset returns just that chart to the statewide view (map,
+// filters and request list untouched) until the next county / district / size selection.
+const CHART_FROZEN={county:false,district:false,size:false};
+let _chartKey=null;
+function chartFilterKey(){ return [$("f-county").value,$("f-district").value,$("f-size").value].join("|"); }
+function chartSet(){
+  const c=$("f-county").value, w=$("f-district").value, z=$("f-size").value;
+  return DATA.filter(d=>(!c||d.props.County===c)&&(!w||d.props.WMDNAME===w)&&(!z||sizeClass(d.props.area_acres)===z));
+}
+function updateChartsIfNeeded(force){
+  const key=chartFilterKey();
+  if(!force && key===_chartKey) return;
+  if(key!==_chartKey){ CHART_FROZEN.county=CHART_FROZEN.district=CHART_FROZEN.size=false; }   // a new selection: all graphs follow it
+  _chartKey=key;
+  const set=chartSet();
+  drawCountyChart(CHART_FROZEN.county?DATA:set);
+  drawDistrictChart(CHART_FROZEN.district?DATA:set);
+  drawSizeChart(CHART_FROZEN.size?DATA:set);
+}
+function resetChart(which){
+  CHART_FROZEN[which]=true;
+  if(which==="county") drawCountyChart(DATA);
+  else if(which==="district") drawDistrictChart(DATA);
+  else drawSizeChart(DATA);
+}
+function drawCountyChart(set){
   const cc={}; set.forEach(d=>cc[d.props.County]=(cc[d.props.County]||0)+(d.props.area_acres||0));
   const top=Object.entries(cc).sort((a,b)=>b[1]-a[1]).slice(0,15);
   const o1=baseOpts(); o1.indexAxis='y'; o1.onClick=countyChartClick; o1.onHover=chartPointer;
   chCounty.data={labels:top.map(x=>x[0]),datasets:[{data:top.map(x=>Math.round(x[1])),backgroundColor:C_CYAN,borderColor:C_BLUE,borderWidth:1}]};
   chCounty.options=o1; chCounty.update();
-  // area by district
+}
+function drawDistrictChart(set){
   const da={}; set.forEach(d=>da[d.props.WMDNAME]=(da[d.props.WMDNAME]||0)+(d.props.area_acres||0));
   const dord=WMD_ORDER.filter(k=>k in da);
   chDistrict._codes=dord;
   const o2=baseOpts(); o2.indexAxis='y'; o2.onClick=districtChartClick; o2.onHover=chartPointer;
   chDistrict.data={labels:dord.map(k=>WMD_LABELS[k]||k),datasets:[{data:dord.map(k=>Math.round(da[k])),backgroundColor:C_GREEN,borderColor:C_BLUE,borderWidth:1}]};
   chDistrict.options=o2; chDistrict.update();
-  // size distribution
+}
+function drawSizeChart(set){
   const sc={}; SIZE_CLASSES.forEach(s=>sc[s.key]=0); set.forEach(d=>sc[sizeClass(d.props.area_acres)]++);
+  const o3=baseOpts(); o3.onClick=sizeChartClick; o3.onHover=chartPointer;
   chSize.data={labels:SIZE_CLASSES.map(s=>s.key),datasets:[{data:SIZE_CLASSES.map(s=>sc[s.key]),backgroundColor:C_BLUE,borderColor:C_BLUE,borderWidth:1}]};
-  chSize.options=baseOpts(); chSize.update();
+  chSize.options=o3; chSize.update();
 }
 
 // ---- selection ----
@@ -455,7 +564,24 @@ function selectCanal(id, fly){
     lyr.openPopup();
   }
   document.querySelectorAll(".listrow").forEach(r=>r.classList.toggle("sel",+r.dataset.id===id));
+  updateClearControl();
 }
+// Deselect the inspected canal only: filters, map view and the request list are left as they are
+function clearSelection(){
+  SELECTED=null; MAP.closePopup(); applyMapStyles();
+  document.querySelectorAll(".listrow.sel").forEach(r=>r.classList.remove("sel"));
+}
+let CLEAR_CTL=null;
+function initClearControl(){
+  const Ctl=L.Control.extend({options:{position:"topleft"},onAdd(){
+    const b=L.DomUtil.create("button","map-clear"); b.type="button"; b.textContent="\u2715 Clear selection";
+    b.title="Deselect this canal (keeps your filters and request list)";
+    L.DomEvent.disableClickPropagation(b);
+    L.DomEvent.on(b,"click",e=>{ L.DomEvent.stop(e); clearSelection(); });
+    b.style.display="none"; return b; }});
+  CLEAR_CTL=new Ctl().addTo(MAP);
+}
+function updateClearControl(){ if(CLEAR_CTL) CLEAR_CTL.getContainer().style.display = SELECTED!=null ? "" : "none"; }
 function escapeHTML(value){
   return String(value).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 }
@@ -483,12 +609,7 @@ function popupHTML(p){
 }
 function toggleCart(id){
   if(CART.has(id)) CART.delete(id); else CART.add(id);
-  updateExportCounts();
-  const lyr=LAYER_BY_ID[id];
-  if(lyr && lyr.getPopup() && lyr.isPopupOpen()){
-    const pr=(lyr.feature&&lyr.feature.properties)||(DATA.find(d=>d.props.CHAWQ_ID===id)||{}).props;
-    if(pr) lyr.setPopupContent(popupHTML(pr));
-  }
+  cartChanged([id]);
 }
 function updateExportCounts(){
   const c=$("em-ccount"); if(c) c.textContent=CART.size;
@@ -504,10 +625,11 @@ function refresh(){
   DATA.forEach((d,i)=>{ d._qs = sc ? sc[i] : 0; d._match=matchesFilters(d.props,d,f); });
   applyMapStyles();
   recompute();
+  updateChartsIfNeeded(false);
 }
 function recompute(){
   const set=effectiveSet();
-  updateKPIs(set); updateList(set); updateCharts(set);
+  updateKPIs(set); updateList(set);
   const fc=$("em-fcount"); if(fc) fc.textContent=fmt(set.length);
 }
 
@@ -889,6 +1011,19 @@ function requestScopeText(){
   return mode+" \u2014 "+set.length+" canals, "+Math.round(acres).toLocaleString()+" acres.\nFilters applied: "+filt+".\nCHAWQ IDs"+(capped?" (largest 50 shown)":"")+": "+ids.join(", ");
 }
 function menuClose(){ const m=$("exportmenu"); if(m) m.hidden=true; }
+// Keep the request panel fully on screen wherever the button wraps to (it used to open off the left edge)
+function positionMenu(){
+  const m=$("exportmenu"), b=$("f-export"); if(!m||m.hidden) return;
+  const r=b.getBoundingClientRect(), vw=document.documentElement.clientWidth, vh=window.innerHeight, pad=8;
+  const w=Math.min(320,vw-2*pad); m.style.width=w+"px";
+  let left=r.right-w; left=Math.max(pad,Math.min(left,vw-w-pad));
+  const below=vh-r.bottom-pad-6, above=r.top-pad-6;
+  m.style.maxHeight=""; const h=m.scrollHeight;
+  let top;
+  if(h<=below || below>=above || below>=300){ top=r.bottom+6; m.style.maxHeight=Math.max(160,below)+"px"; }
+  else { const mh=Math.min(h,above); top=r.top-6-mh; m.style.maxHeight=mh+"px"; }
+  m.style.left=left+"px"; m.style.top=Math.max(pad,top)+"px";
+}
 async function sendShapefileRequest(){
   const name=$("req-name").value.trim(), email=$("req-email").value.trim(), purpose=$("req-purpose").value.trim();
   const status=$("req-status"), btn=$("em-send");
@@ -946,6 +1081,7 @@ function buildLayer(geojson){
 
 async function boot(){
   initMap();
+  initClearControl();
   let geo;
   try{
     const archive="ResCanal_Polygons_10132026_WMDs.zip";
@@ -994,11 +1130,22 @@ async function boot(){
     try{ MAP.flyToBounds(LAYER.getBounds(),{padding:[20,20]}); }catch(e){}
   });
   const menu=$("exportmenu");
-  $("f-export").addEventListener("click",(e)=>{ e.stopPropagation(); menu.hidden=!menu.hidden; });
+  $("f-export").addEventListener("click",(e)=>{
+    e.stopPropagation(); menu.hidden=!menu.hidden; if(menu.hidden) return;
+    // not enough room under the button? scroll the page so the whole form fits below it
+    menu.style.maxHeight=""; const r=$("f-export").getBoundingClientRect(), need=menu.scrollHeight+20;
+    if(window.innerHeight-r.bottom<need){ window.scrollBy(0,Math.max(0,Math.min(r.top-12,need-(window.innerHeight-r.bottom)))); }
+    positionMenu();
+  });
+  window.addEventListener("resize",positionMenu);
+  window.addEventListener("scroll",positionMenu,{passive:true});
   document.addEventListener("click",(e)=>{ if(!menu.hidden && !menu.contains(e.target) && !$("f-export").contains(e.target)) menu.hidden=true; });
   menu.addEventListener("click",(e)=>e.stopPropagation());
-  $("em-addfilter").addEventListener("click",()=>{ effectiveSet().forEach(d=>CART.add(d.props.CHAWQ_ID)); updateExportCounts(); });
-  $("em-clearcart").addEventListener("click",()=>{ CART.clear(); updateExportCounts(); });
+  $("em-addfilter").addEventListener("click",()=>{ const ids=effectiveSet().map(d=>d.props.CHAWQ_ID); ids.forEach(id=>CART.add(id)); cartChanged(ids); });
+  $("em-clearcart").addEventListener("click",()=>{ const ids=[...CART]; CART.clear(); cartChanged(ids); });
+  $("cart-clearall").addEventListener("click",()=>{ const ids=[...CART]; CART.clear(); cartChanged(ids); });
+  document.querySelectorAll("[data-chreset]").forEach(b=>b.addEventListener("click",()=>resetChart(b.dataset.chreset)));
+  $("ch-resetall").addEventListener("click",()=>["county","district","size"].forEach(resetChart));
   $("em-send").addEventListener("click",sendShapefileRequest);
   updateExportCounts();
   MAP.on("moveend",()=>{ if($("f-view").checked) recompute(); });
