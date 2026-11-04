@@ -13,7 +13,7 @@ Once GitHub Pages is enabled (Settings → Pages → Deploy from a branch → `m
 ## What's in this repo
 
 - **index.html** — the dashboard.
-- **ResCanals_Typology_for_GitHub_10072026.zip** — required shapefile archive. Add it beside `index.html` and include it in the GitHub Pages deployment.
+- **ResCanal_Polygons_10212026_WMDs_with_DistZonalStats.zip** — required shapefile archive. Add it beside `index.html` and include it in the GitHub Pages deployment.
 
 ## Using it
 
